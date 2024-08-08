@@ -32,6 +32,13 @@ HDV_OPTIONS = {
     '3': '&typeId=82&typeId=1&typeId=9&typeId=10&typeId=11&typeId=16&typeId=17&level[$gt]=199',
 }
 
+# Définir les routes API en fonction de l'HDV choisi
+API_ROUTES = {
+    '1': 'resources',
+    '2': 'consumables',
+    '3': 'items',
+}
+
 
 def choose_hdv():
     print("Choisissez l'Hôtel de Vente (HDV) :")
@@ -39,7 +46,7 @@ def choose_hdv():
     print("2. Consommables")
     print("3. Équipements")
     choice = input("Entrez le numéro correspondant à votre choix: ")
-    return HDV_OPTIONS.get(choice, None)
+    return choice, HDV_OPTIONS.get(choice, None), API_ROUTES.get(choice, 'items')
 
 
 def fetch_items_from_api(hdv_option):
@@ -99,8 +106,8 @@ def clean_price(price_text):
     return price_text.replace(" ", "")
 
 
-def send_price_to_api(item_id, item_name, price_text, item_number):
-    url = "http://localhost:5000/prices"
+def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
+    url = f"http://localhost:5000/{api_route}"
     data = {
         "id": item_id,
         "item_name": item_name,
@@ -117,7 +124,7 @@ def send_price_to_api(item_id, item_name, price_text, item_number):
         print(f"Item {item_number}: Erreur : {err}")
 
 
-def process_item(item, item_number):
+def process_item(item, item_number, api_route):
     if stop_flag:
         return
 
@@ -154,8 +161,9 @@ def process_item(item, item_number):
             if not price_text.strip():
                 raise ValueError("Le texte du prix est vide ou invalide")
 
-            # Ajoutez les données à la queue avec le numéro d'item
-            api_queue.put((item_id, item_name, price_text, item_number))
+            # Ajoutez les données à la queue avec le numéro d'item et la route API
+            api_queue.put(
+                (item_id, item_name, price_text, item_number, api_route))
             time.sleep(0.2)  # Augmenter légèrement le temps de pause
 
             move_and_click(third_x, third_y)
@@ -169,12 +177,12 @@ def process_item(item, item_number):
             time.sleep(1)  # Attendre avant de réessayer
 
 
-def clear_prices_from_api():
-    url = "http://localhost:5000/prices/clear"
+def clear_prices_from_api(api_route):
+    url = f"http://localhost:5000/{api_route}/clear"
     try:
         response = requests.post(url)
         response.raise_for_status()
-        print("API vidée")
+        print(f"API {api_route} vidée")
     except requests.exceptions.HTTPError as http_err:
         print(f"Erreur HTTP : {http_err}")
     except Exception as err:
@@ -187,8 +195,9 @@ def api_worker():
             item = api_queue.get(timeout=1)
             if item[0] is None:  # Vérifiez que le signal de fin est bien reçu
                 break
-            item_id, item_name, price_text, item_number = item
-            send_price_to_api(item_id, item_name, price_text, item_number)
+            item_id, item_name, price_text, item_number, api_route = item
+            send_price_to_api(item_id, item_name, price_text,
+                              item_number, api_route)
         except queue.Empty:
             continue
         except Exception as e:
@@ -205,12 +214,12 @@ def monitor_stop_key():
 def main():
     global stop_flag
 
-    hdv_option = choose_hdv()
+    hdv_choice, hdv_option, api_route = choose_hdv()
 
     stop_thread = threading.Thread(target=monitor_stop_key)
     stop_thread.start()
 
-    clear_prices_from_api()  # Clear the API before adding new prices
+    clear_prices_from_api(api_route)  # Clear the API before adding new prices
 
     items = fetch_items_from_api(hdv_option)
 
@@ -223,11 +232,11 @@ def main():
         if stop_flag:
             print("Arrêt du script demandé ...")
             break
-        process_item(item, index)
+        process_item(item, index, api_route)
 
     # Envoyer le signal de fin au worker API
     # Assurez-vous de correspondre au format attendu
-    api_queue.put((None, None, None, None))
+    api_queue.put((None, None, None, None, None))
 
     # Attendre que le worker API termine avant de quitter
     api_thread.join()

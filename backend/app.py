@@ -5,26 +5,72 @@ app = Flask(__name__)
 # Autoriser les requêtes de toutes les origines
 CORS(app, origins=["http://localhost:3000"])
 
-prices = []
+items = []
+resources = []
+consumables = []
+
+# Routes pour les items
 
 
-@app.route('/prices', methods=['POST'])
-def add_price():
+@app.route('/items', methods=['POST'])
+def add_item():
     data = request.json
-    prices.append(data)
+    items.append(data)
     return jsonify(data), 201
 
 
-@app.route('/prices', methods=['GET'])
-def get_prices():
-    return jsonify(prices)
+@app.route('/items', methods=['GET'])
+def get_items():
+    return jsonify(items)
 
 
-@app.route('/prices/clear', methods=['POST'])
-def clear_prices():
-    global prices
-    prices = []
-    return jsonify({"message": "All prices cleared"}), 200
+@app.route('/items/clear', methods=['POST'])
+def clear_items():
+    global items
+    items = []
+    return jsonify({"message": "All items cleared"}), 200
+
+# Routes pour les resources
+
+
+@app.route('/resources', methods=['POST'])
+def add_resource():
+    data = request.json
+    resources.append(data)
+    return jsonify(data), 201
+
+
+@app.route('/resources', methods=['GET'])
+def get_resources():
+    return jsonify(resources)
+
+
+@app.route('/resources/clear', methods=['POST'])
+def clear_resources():
+    global resources
+    resources = []
+    return jsonify({"message": "All resources cleared"}), 200
+
+# Routes pour les consumables
+
+
+@app.route('/consumables', methods=['POST'])
+def add_consumable():
+    data = request.json
+    consumables.append(data)
+    return jsonify(data), 201
+
+
+@app.route('/consumables', methods=['GET'])
+def get_consumables():
+    return jsonify(consumables)
+
+
+@app.route('/consumables/clear', methods=['POST'])
+def clear_consumables():
+    global consumables
+    consumables = []
+    return jsonify({"message": "All consumables cleared"}), 200
 
 
 if __name__ == '__main__':

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ItemCard from "./components/ItemCard";
 import Pagination from "./components/navigation/Pagination";
-import RecipeCard from "./components/RecipeCard";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import "./css/App.css";
 
@@ -34,7 +33,7 @@ const App = () => {
 
     const fetchPrices = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/prices");
+        const response = await axios.get("http://localhost:5000/items");
         setPrices(response.data);
       } catch (error) {
         console.error("Error fetching prices:", error);
@@ -71,7 +70,6 @@ const App = () => {
               </>
             }
           />
-          <Route path="/recipe/:id" element={<RecipeCard />} />
         </Routes>
       </div>
     </Router>

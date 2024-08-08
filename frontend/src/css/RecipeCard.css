@@ -1,0 +1,13 @@
+/* RecipeCard.css */
+.recipe-card {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  margin: 20px;
+}
+
+.recipe-card h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}

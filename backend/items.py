@@ -26,9 +26,10 @@ api_queue = queue.Queue()
 
 # Définir les types d'items en fonction de l'HDV choisi
 HDV_OPTIONS = {
-    '1': 'typeId=82',  # RESSOURCES
-    '2': 'id=16944&id=11504&id=11507',  # CONSOMMABLES
-    # EQUIPEMENTS
+    # Ressources
+    '1': 'typeId=167&typeId=104&typeId=40&typeId=38&typeId=108&typeId=107&typeId=34&typeId=119&typeId=111&typeId=56&typeId=35&typeId=152&typeId=60&typeId=57&typeId=228&typeId=71&typeId=39&typeId=106&typeId=47&typeId=103&typeId=59&typeId=105&typeId=109&typeId=51&typeId=50&typeId=36&typeId=53&typeId=54&typeId=41&typeId=48&typeId=65&typeId=98&typeId=229&typeId=219&typeId=15&typeId=183&typeId=164&level[$gt]=159',
+    '2': 'id=16944&id=11504&id=11507',  # Consommables
+    # Équipements
     '3': '&typeId=82&typeId=1&typeId=9&typeId=10&typeId=11&typeId=16&typeId=17&level[$gt]=199',
 }
 
@@ -58,6 +59,15 @@ def fetch_items_from_api(hdv_option):
     items = []
     skip = 0
     limit = 50
+
+    # Ajouter les requêtes supplémentaires si HDV Ressources est choisi
+    if hdv_option == HDV_OPTIONS['1']:
+        extra_ids = [14635, 15219, 15271]
+        for item_id in extra_ids:
+            response = requests.get(
+                f"{url}?$limit={limit}&$skip={skip}&id={item_id}")
+            data = response.json()
+            items.extend(data['data'])
 
     while True:
         response = requests.get(

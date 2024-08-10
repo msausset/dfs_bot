@@ -6,7 +6,6 @@ CORS(app, origins=["http://localhost:3000"])
 
 items = []
 resources = []
-consumables = []
 
 # Fonction pour vérifier si une ressource existe déjà
 
@@ -60,27 +59,6 @@ def clear_resources():
     global resources
     resources = []
     return jsonify({"message": "All resources cleared"}), 200
-
-# Routes pour les consumables
-
-
-@app.route('/consumables', methods=['POST'])
-def add_consumable():
-    data = request.json
-    consumables.append(data)
-    return jsonify(data), 201
-
-
-@app.route('/consumables', methods=['GET'])
-def get_consumables():
-    return jsonify(consumables)
-
-
-@app.route('/consumables/clear', methods=['POST'])
-def clear_consumables():
-    global consumables
-    consumables = []
-    return jsonify({"message": "All consumables cleared"}), 200
 
 
 if __name__ == '__main__':

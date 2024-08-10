@@ -6,9 +6,13 @@ import pytesseract
 import keyboard
 import threading
 import queue
+import json
+import os
 
 # Configurez le chemin vers le binaire Tesseract-OCR si nécessaire
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+CONFIG_FILE = 'ItemsTotal.json'
 
 # Variable globale pour contrôler l'exécution
 stop_flag = False
@@ -126,6 +130,39 @@ def resource_exists(resource_id):
         return False
 
 
+def get_total_items():
+    url = "https://api.dofusdb.fr/items?$limit=50&$skip=50&typeId=82&typeId=1&typeId=9&typeId=10&typeId=11&typeId=16&typeId=17&level[$gt]=199"
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Vérifie que la requête a réussi
+
+        data = response.json()
+        total_items = data['total']  # Récupère le nombre total d'items
+
+        return total_items
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la récupération des items : {e}")
+        return None
+
+
+def read_total_items_from_config():
+    if not os.path.exists(CONFIG_FILE):
+        # Créer le fichier avec une valeur par défaut si le fichier n'existe pas
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump({"total_items": 299}, f)
+        return 299
+
+    with open(CONFIG_FILE, 'r') as f:
+        config = json.load(f)
+    return config.get("total_items", 299)
+
+
+def write_total_items_to_config(total_items):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump({"total_items": total_items}, f)
+
+
 def move_and_click(x, y):
     if stop_flag:
         return
@@ -187,6 +224,12 @@ def process_item(item, item_number, api_route):
 
     attempt = 0
     max_attempts = 3
+
+    # Lire le nombre total d'items stocké dans le fichier de configuration
+    stored_total_items = read_total_items_from_config()
+    # Récupérer le nombre total d'items depuis l'API
+    total_items = get_total_items()
+
     while attempt < max_attempts:
         if stop_flag:
             print("Programme arrêté pendant le traitement des items.")
@@ -222,7 +265,8 @@ def process_item(item, item_number, api_route):
             move_and_click(third_x, third_y)
             time.sleep(0.1)  # Augmenter légèrement le temps de pause
 
-            if api_route == 'items':  # Si l'option Équipements est choisie
+            # Comparer les valeurs et récupérer les ingrédients si nécessaire
+            if api_route == 'items' and total_items != stored_total_items:
                 ingredients = fetch_recipes_from_api(item_id)
                 for ingredient in ingredients:
                     ingredient_id = ingredient['id']
@@ -238,6 +282,9 @@ def process_item(item, item_number, api_route):
                         }
                         requests.post(
                             "http://localhost:5000/resources", json=resource_data)
+
+                # Mettre à jour le fichier de configuration après avoir récupéré les ingrédients
+                write_total_items_to_config(total_items)
 
             break  # Sortir de la boucle en cas de succès
         except Exception as e:

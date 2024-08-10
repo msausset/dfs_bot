@@ -83,6 +83,49 @@ def fetch_items_from_api(hdv_option):
     return items
 
 
+def fetch_recipes_from_api(item_id):
+    url = f"https://api.dofusdb.fr/recipes?resultId={item_id}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        recipe_data = response.json().get('data', [])
+
+        if not recipe_data:
+            print(f"Aucune recette trouvée pour l'item ID: {item_id}")
+            return []
+
+        # On suppose que la première recette est la bonne
+        first_recipe = recipe_data[0]
+        ingredient_ids = first_recipe.get('ingredientIds', [])
+
+        ingredients = []
+        for ingredient_id in ingredient_ids:
+            ingredient_response = requests.get(
+                f"https://api.dofusdb.fr/items/{ingredient_id}")
+            ingredient_response.raise_for_status()
+            ingredients.append(ingredient_response.json())
+
+        return ingredients
+    except requests.exceptions.HTTPError as http_err:
+        print(f"Erreur HTTP lors de la récupération des recettes : {http_err}")
+        return []
+    except Exception as err:
+        print(f"Erreur lors de la récupération des recettes : {err}")
+        return []
+
+
+def resource_exists(resource_id):
+    try:
+        response = requests.get(f"http://localhost:5000/resources")
+        response.raise_for_status()
+        resources = response.json()
+        return any(resource['id'] == resource_id for resource in resources)
+    except requests.exceptions.RequestException as e:
+        print(
+            f"Erreur lors de la vérification de l'existence de la ressource : {e}")
+        return False
+
+
 def move_and_click(x, y):
     if stop_flag:
         return
@@ -179,6 +222,23 @@ def process_item(item, item_number, api_route):
             move_and_click(third_x, third_y)
             time.sleep(0.1)  # Augmenter légèrement le temps de pause
 
+            if api_route == 'items':  # Si l'option Équipements est choisie
+                ingredients = fetch_recipes_from_api(item_id)
+                for ingredient in ingredients:
+                    ingredient_id = ingredient['id']
+                    # Vérifiez si la ressource existe déjà
+                    if not resource_exists(ingredient_id):
+                        resource_data = {
+                            "id": ingredient_id,
+                            "item_name": ingredient['name']['fr'],
+                            "item_slug": ingredient['slug']['fr'],
+                            "price_1": "",  # Champs "1", "10" et "100" vides pour l'instant
+                            "price_10": "",
+                            "price_100": ""
+                        }
+                        requests.post(
+                            "http://localhost:5000/resources", json=resource_data)
+
             break  # Sortir de la boucle en cas de succès
         except Exception as e:
             print(f"Une erreur s'est produite sur la fonction 'processing item' {
@@ -230,6 +290,10 @@ def main():
     stop_thread.start()
 
     clear_prices_from_api(api_route)  # Clear the API before adding new prices
+
+    if hdv_choice == '1':  # Ajouter un clic supplémentaire pour l'option Ressources
+        move_and_click(1380, 231)
+        time.sleep(0.2)
 
     items = fetch_items_from_api(hdv_option)
 

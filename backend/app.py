@@ -2,12 +2,17 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Autoriser les requêtes de toutes les origines
 CORS(app, origins=["http://localhost:3000"])
 
 items = []
 resources = []
 consumables = []
+
+# Fonction pour vérifier si une ressource existe déjà
+
+
+def resource_exists(resource_id):
+    return any(resource['id'] == resource_id for resource in resources)
 
 # Routes pour les items
 
@@ -36,6 +41,11 @@ def clear_items():
 @app.route('/resources', methods=['POST'])
 def add_resource():
     data = request.json
+    resource_id = data.get('id')
+
+    if resource_exists(resource_id):
+        return jsonify({"message": "Resource already exists"}), 409
+
     resources.append(data)
     return jsonify(data), 201
 

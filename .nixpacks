@@ -1,0 +1,10 @@
+# .nixpacks
+version: 0.1
+build:
+  commands:
+    - pip install -r backend/requirements.txt
+  ignore:
+    - frontend/
+start:
+  command: gunicorn --bind 0.0.0.0:8000 app:app
+  directory: backend

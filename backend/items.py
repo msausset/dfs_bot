@@ -120,7 +120,8 @@ def fetch_recipes_from_api(item_id):
 
 def resource_exists(resource_id):
     try:
-        response = requests.get(f"http://localhost:5000/resources")
+        response = requests.get(
+            f"https://dfs-bot-4338ac8851d5.herokuapp.com/resources")
         response.raise_for_status()
         resources = response.json()
         return any(resource['id'] == resource_id for resource in resources)
@@ -197,7 +198,7 @@ def clean_price(price_text):
 
 
 def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
-    url = f"http://localhost:5000/{api_route}"
+    url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
     data = {
         "id": item_id,
         "item_name": item_name,
@@ -281,7 +282,7 @@ def process_item(item, item_number, api_route):
                             "price_100": ""
                         }
                         requests.post(
-                            "http://localhost:5000/resources", json=resource_data)
+                            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
 
                 # Mettre à jour le fichier de configuration après avoir récupéré les ingrédients
                 # write_total_items_to_config(total_items)
@@ -295,7 +296,7 @@ def process_item(item, item_number, api_route):
 
 
 def clear_prices_from_api(api_route):
-    url = f"http://localhost:5000/{api_route}/clear"
+    url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}/clear"
     try:
         response = requests.post(url)
         response.raise_for_status()

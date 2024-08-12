@@ -3,7 +3,7 @@
 import time
 import pyautogui
 import requests
-from api_utils import fetch_recipes_from_api, resource_exists, is_resources_empty, get_total_items, read_total_items_from_config, write_total_items_to_config
+from api_utils import fetch_recipes_from_api, resource_exists, get_total_items, read_total_items_from_config, write_total_items_to_config
 from image_utils import move_and_click, capture_price_area, extract_text_from_image
 from constants import THIRD_X, THIRD_Y, FIRST_X, FIRST_Y, SECOND_X, SECOND_Y, PRICE_X, PRICE_Y, PRICE_WIDTH, PRICE_HEIGHT, HDV_OPTIONS, API_ROUTES, STOP_FLAG, API_QUEUE
 
@@ -62,23 +62,34 @@ def process_item(item, item_number, api_route, resources_empty):
             move_and_click(THIRD_X, THIRD_Y)
             time.sleep(0.1)
 
-            if api_route == 'items' and (resources_empty or total_items != stored_total_items):
-                ingredients = fetch_recipes_from_api(item_id)
-                for ingredient in ingredients:
-                    ingredient_id = ingredient['id']
-                    if not resource_exists(ingredient_id):
-                        resource_data = {
-                            "id": ingredient_id,
-                            "item_name": ingredient['name']['fr'],
-                            "item_slug": ingredient['slug']['fr'],
-                            "price_1": "",
-                            "price_10": "",
-                            "price_100": ""
-                        }
-                        requests.post(
-                            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
+            if api_route == 'items':
+                print(f"Debugging - api_route: {api_route}")
+                print(f"Debugging - resources_empty: {resources_empty}")
+                print(f"Debugging - total_items: {total_items}")
+                print(f"Debugging - stored_total_items: {stored_total_items}")
 
-                write_total_items_to_config(total_items)
+                if resources_empty or total_items != stored_total_items:
+                    print("Condition remplie, traitement des ingrédients.")
+                    ingredients = fetch_recipes_from_api(item_id)
+                    for ingredient in ingredients:
+                        ingredient_id = ingredient['id']
+                        if not resource_exists(ingredient_id):
+                            resource_data = {
+                                "id": ingredient_id,
+                                "item_name": ingredient['name']['fr'],
+                                "item_slug": ingredient['slug']['fr'],
+                                "price_1": "",
+                                "price_10": "",
+                                "price_100": ""
+                            }
+                            requests.post(
+                                "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
+
+                    write_total_items_to_config(total_items)
+
+                else:
+                    print(
+                        "Condition non remplie, traitement des ingrédients non effectué.")
 
             break
         except Exception as e:

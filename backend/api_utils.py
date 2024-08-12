@@ -1,7 +1,4 @@
 import requests
-import json
-import os
-from constants import CONFIG_FILE
 
 
 def clear_prices_from_api(api_route):

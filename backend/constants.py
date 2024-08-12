@@ -1,7 +1,10 @@
 import queue
+from threading import Event
 
 # Variable globale pour contrôler l'exécution
 STOP_FLAG = False
+
+STOP_EVENT = Event()
 
 # Queue pour stocker les données à envoyer à l'API
 API_QUEUE = queue.Queue()

@@ -6,13 +6,16 @@ import queue
 from api_utils import fetch_items_from_api, clear_prices_from_api
 from item_processing import process_item, choose_hdv
 from image_utils import move_and_click
-from constants import API_QUEUE, STOP_FLAG
+from constants import API_QUEUE, STOP_FLAG, STOP_EVENT
 
 
 def monitor_stop_key():
     global STOP_FLAG
-    keyboard.wait('num 0')
-    STOP_FLAG = True
+    while not STOP_EVENT.is_set():
+        if keyboard.is_pressed('num 0'):
+            STOP_FLAG = True
+            STOP_EVENT.set()
+            break
 
 
 def api_worker():
@@ -56,12 +59,18 @@ def clean_price(price_text):
 def main():
     global STOP_FLAG
 
+    # Enregistrer le temps de début
+    start_time = time.time()
+
     hdv_choice, hdv_option, api_route = choose_hdv()
 
     stop_thread = threading.Thread(target=monitor_stop_key)
     stop_thread.start()
 
-    clear_prices_from_api(api_route)
+    print(hdv_choice)
+
+    if hdv_choice == '3':
+        clear_prices_from_api(api_route)
 
     if hdv_choice == '1':
         move_and_click(1380, 231)
@@ -83,10 +92,22 @@ def main():
     api_thread.join()
     print("API thread terminé.")
 
+    # Signaler l'arrêt au thread de surveillance
+    STOP_EVENT.set()
+
     stop_thread.join()
     print("Stop thread terminé.")
 
-    print("Programme terminé !")
+    print("Script terminé !")
+
+    # Enregistrer le temps de fin
+    end_time = time.time()
+
+    # Calculer le temps total
+    elapsed_time = end_time - start_time
+
+    # Afficher le temps total
+    print(f"Temps d'exécution total : {elapsed_time:.2f} secondes")
 
 
 if __name__ == "__main__":

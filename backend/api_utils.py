@@ -171,9 +171,7 @@ def add_items_to_list(items):
         # Préparer les données pour la route items-prices
         items_prices_data = {
             "id": item['id'],
-            "price_1": "",
-            "price_10": "",
-            "price_100": ""
+            "price": ""
         }
 
         try:
@@ -200,7 +198,6 @@ def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
     url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
     data = {
         "id": item_id,
-        "item_name": item_name,
         "price": clean_price(price_text.strip())
     }
     try:

@@ -85,33 +85,3 @@ def resource_exists(resource_id):
         print(
             f"Erreur lors de la vérification de l'existence de la ressource : {e}")
         return False
-
-
-def get_total_items():
-    url = "https://api.dofusdb.fr/items?$limit=50&$skip=50&typeId=82&typeId=1&typeId=9&typeId=10&typeId=11&typeId=16&typeId=17&level[$gt]=199"
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        total_items = data['total']
-        return total_items
-    except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération des items : {e}")
-        return None
-
-
-def read_total_items_from_config():
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump({"total_items": 299}, f)
-        return 299
-
-    with open(CONFIG_FILE, 'r') as f:
-        config = json.load(f)
-    return config.get("total_items", 299)
-
-
-def write_total_items_to_config(total_items):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump({"total_items": total_items}, f)

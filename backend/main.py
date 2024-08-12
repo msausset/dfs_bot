@@ -3,7 +3,7 @@ import keyboard
 import requests
 import time
 import queue
-from api_utils import fetch_items_from_api, is_resources_empty, clear_prices_from_api
+from api_utils import fetch_items_from_api, clear_prices_from_api
 from item_processing import process_item, choose_hdv
 from image_utils import move_and_click
 from constants import API_QUEUE, STOP_FLAG

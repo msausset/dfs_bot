@@ -3,7 +3,7 @@
 import time
 import pyautogui
 import requests
-from api_utils import fetch_recipes_from_api, resource_exists, get_total_items, read_total_items_from_config, write_total_items_to_config
+from api_utils import fetch_recipes_from_api, resource_exists
 from image_utils import move_and_click, capture_price_area, extract_text_from_image
 from constants import THIRD_X, THIRD_Y, FIRST_X, FIRST_Y, SECOND_X, SECOND_Y, PRICE_X, PRICE_Y, PRICE_WIDTH, PRICE_HEIGHT, HDV_OPTIONS, API_ROUTES, STOP_FLAG, API_QUEUE
 
@@ -27,9 +27,6 @@ def process_item(item, item_number, api_route):
 
     attempt = 0
     max_attempts = 3
-
-    stored_total_items = read_total_items_from_config()
-    total_items = get_total_items()
 
     while attempt < max_attempts:
         if STOP_FLAG:
@@ -62,7 +59,7 @@ def process_item(item, item_number, api_route):
             move_and_click(THIRD_X, THIRD_Y)
             time.sleep(0.1)
 
-            if api_route == 'items' and total_items != stored_total_items:
+            if api_route == 'items':
                 ingredients = fetch_recipes_from_api(item_id)
                 for ingredient in ingredients:
                     ingredient_id = ingredient['id']
@@ -77,8 +74,6 @@ def process_item(item, item_number, api_route):
                         }
                         requests.post(
                             "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
-
-                write_total_items_to_config(total_items)
 
             break
         except Exception as e:

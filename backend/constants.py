@@ -29,6 +29,3 @@ API_ROUTES = {
     '2': 'consumables',
     '3': 'items',
 }
-
-# Fichier de configuration
-CONFIG_FILE = 'ItemsTotal.json'

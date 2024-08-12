@@ -227,7 +227,7 @@ def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
         print(f"Item {item_number}: Erreur : {err}")
 
 
-def process_item(item, item_number, api_route):
+def process_item(item, item_number, api_route, resources_empty):
     if stop_flag:
         return
 
@@ -279,7 +279,7 @@ def process_item(item, item_number, api_route):
             time.sleep(0.1)  # Augmenter légèrement le temps de pause
 
             # Comparer les valeurs et récupérer les ingrédients si nécessaire
-            if api_route == 'items' and (total_items != stored_total_items or is_resources_empty()):
+            if api_route == 'items' and (resources_empty or total_items != stored_total_items):
                 ingredients = fetch_recipes_from_api(item_id)
                 for ingredient in ingredients:
                     ingredient_id = ingredient['id']
@@ -357,6 +357,9 @@ def main():
 
     items = fetch_items_from_api(hdv_option)
 
+    # Vérifiez si la route /resources est vide une fois au début du script
+    resources_empty = is_resources_empty()
+
     # Thread pour envoyer les données à l'API
     api_thread = threading.Thread(target=api_worker)
     api_thread.start()
@@ -366,7 +369,7 @@ def main():
         if stop_flag:
             print("Arrêt du script demandé ...")
             break
-        process_item(item, index, api_route)
+        process_item(item, index, api_route, resources_empty)
 
     # Envoyer le signal de fin au worker API
     # Assurez-vous de correspondre au format attendu

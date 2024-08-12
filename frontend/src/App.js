@@ -33,7 +33,9 @@ const App = () => {
 
     const fetchPrices = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/items");
+        const response = await axios.get(
+          "https://dfs-bot-4338ac8851d5.herokuapp.com/items"
+        );
         setPrices(response.data);
       } catch (error) {
         console.error("Error fetching prices:", error);

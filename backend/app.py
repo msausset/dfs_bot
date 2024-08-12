@@ -34,6 +34,28 @@ def get_list_items():
 
 @app.route('/list-items/clear', methods=['POST'])
 def clear_list_items():
+    global list_items
+    list_items = []
+    return jsonify({"message": "All list items cleared"}), 200
+
+
+# Routes pour items-prices
+
+
+@app.route('/items-prices', methods=['POST'])
+def add_item_price():
+    data = request.json
+    items_prices.append(data)
+    return jsonify(data), 201
+
+
+@app.route('/items-prices', methods=['GET'])
+def get_items_prices():
+    return jsonify(items_prices)
+
+
+@app.route('/items-prices/clear', methods=['POST'])
+def clear_items_prices():
     url = "https://dfs-bot-4338ac8851d5.herokuapp.com/items-prices"
 
     try:
@@ -69,28 +91,6 @@ def clear_list_items():
         return jsonify({"error": f"Erreur HTTP lors de la récupération des prix des ressources : {http_err}"}), 500
     except Exception as err:
         return jsonify({"error": f"Erreur lors de la récupération des prix des ressources : {err}"}), 500
-
-
-# Routes pour items-prices
-
-
-@app.route('/items-prices', methods=['POST'])
-def add_item_price():
-    data = request.json
-    items_prices.append(data)
-    return jsonify(data), 201
-
-
-@app.route('/items-prices', methods=['GET'])
-def get_items_prices():
-    return jsonify(items_prices)
-
-
-@app.route('/items-prices/clear', methods=['POST'])
-def clear_items_prices():
-    global items_prices
-    items_prices = []
-    return jsonify({"message": "All items prices cleared"}), 200
 
 # Routes pour list-resources
 

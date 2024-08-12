@@ -28,7 +28,7 @@ HDV_OPTIONS = {
 
 # API Routes
 API_ROUTES = {
-    '1': 'list-resources',
-    '2': 'list-resources',
-    '3': 'list-items',
+    '1': 'resources-prices',
+    '2': 'resources-prices',
+    '3': 'items-prices',
 }

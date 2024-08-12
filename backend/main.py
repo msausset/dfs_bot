@@ -69,8 +69,6 @@ def main():
 
     items = fetch_items_from_api(hdv_option)
 
-    resources_empty = is_resources_empty()
-
     api_thread = threading.Thread(target=api_worker)
     api_thread.start()
 
@@ -78,7 +76,7 @@ def main():
         if STOP_FLAG:
             print("Arrêt du script demandé ...")
             break
-        process_item(item, index, api_route, resources_empty)
+        process_item(item, index, api_route)
 
     API_QUEUE.put((None, None, None, None, None))
 

@@ -131,6 +131,18 @@ def resource_exists(resource_id):
         return False
 
 
+def is_resources_empty():
+    try:
+        response = requests.get(
+            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources")
+        response.raise_for_status()
+        resources = response.json()
+        return len(resources) == 0
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la vérification des ressources : {e}")
+        return False
+
+
 def get_total_items():
     url = "https://api.dofusdb.fr/items?$limit=50&$skip=50&typeId=82&typeId=1&typeId=9&typeId=10&typeId=11&typeId=16&typeId=17&level[$gt]=199"
 
@@ -267,7 +279,7 @@ def process_item(item, item_number, api_route):
             time.sleep(0.1)  # Augmenter légèrement le temps de pause
 
             # Comparer les valeurs et récupérer les ingrédients si nécessaire
-            if api_route == 'items' and total_items != stored_total_items:
+            if api_route == 'items' and (total_items != stored_total_items or is_resources_empty()):
                 ingredients = fetch_recipes_from_api(item_id)
                 for ingredient in ingredients:
                     ingredient_id = ingredient['id']

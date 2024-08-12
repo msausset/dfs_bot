@@ -157,8 +157,6 @@ def check_and_clear_prices():
 def add_items_to_list(items):
     # URL pour ajouter les items à la liste
     list_items_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items"
-    # URL pour ajouter les items aux prix des items
-    items_prices_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/items-prices"
 
     for item in items:
         # Préparer les données pour la route list-items
@@ -168,23 +166,11 @@ def add_items_to_list(items):
             "item_slug": item['slug']['fr']
         }
 
-        # Préparer les données pour la route items-prices
-        items_prices_data = {
-            "id": item['id'],
-            "price": ""
-        }
-
         try:
             # Ajouter l'item à la liste d'items
             response = requests.post(list_items_url, json=list_item_data)
             response.raise_for_status()
             print(f"Item ajouté à list-items: {item['name']['fr']}")
-
-            # Ajouter les données de l'item aux prix des items
-            response = requests.post(items_prices_url, json=items_prices_data)
-            response.raise_for_status()
-            print(f"Prix initialisé pour l'item {
-                  item['name']['fr']} dans items-prices")
 
         except requests.exceptions.HTTPError as http_err:
             print(f"Erreur HTTP lors de l'ajout de l'item {

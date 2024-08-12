@@ -3,7 +3,7 @@
 import time
 import pyautogui
 import requests
-from api_utils import fetch_recipes_from_api, resource_exists
+from api_utils import fetch_recipes_from_api, resource_exists, check_resources_prices_empty, check_list_resources_empty
 from image_utils import move_and_click, capture_price_area, extract_text_from_image
 from constants import THIRD_X, THIRD_Y, FIRST_X, FIRST_Y, SECOND_X, SECOND_Y, PRICE_X, PRICE_Y, PRICE_WIDTH, PRICE_HEIGHT, HDV_OPTIONS, API_ROUTES, STOP_FLAG, API_QUEUE
 
@@ -61,19 +61,60 @@ def process_item(item, item_number, api_route):
 
             if api_route == 'items':
                 ingredients = fetch_recipes_from_api(item_id)
-                for ingredient in ingredients:
-                    ingredient_id = ingredient['id']
-                    if not resource_exists(ingredient_id):
-                        resource_data = {
-                            "id": ingredient_id,
-                            "item_name": ingredient['name']['fr'],
-                            "item_slug": ingredient['slug']['fr'],
-                            "price_1": "",
-                            "price_10": "",
-                            "price_100": ""
-                        }
-                        requests.post(
-                            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
+
+                # Vérifiez si list-resources est vide
+                if check_list_resources_empty():
+                    print("List-resources est vide. Ajout des ingrédients...")
+
+                    for ingredient in ingredients:
+                        ingredient_id = ingredient['id']
+                        ingredient_name = ingredient['name']['fr']
+                        ingredient_slug = ingredient['slug']['fr']
+
+                        # Vérifiez si la ressource existe déjà dans list-resources
+                        if not resource_exists(ingredient_id, "list-resources"):
+                            # Ajoutez les ingrédients à list-resources
+                            resource_data = {
+                                "id": ingredient_id,
+                                "item_name": ingredient_name,
+                                "item_slug": ingredient_slug
+                            }
+                            try:
+                                response = requests.post(
+                                    "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources", json=resource_data)
+                                response.raise_for_status()
+                                print(
+                                    f"Ingrédient ajouté à list-resources: {ingredient_name}")
+                            except requests.exceptions.HTTPError as http_err:
+                                print(f"Erreur HTTP lors de l'ajout de l'ingrédient {
+                                      ingredient_name} : {http_err}")
+                            except Exception as err:
+                                print(f"Erreur lors de l'ajout de l'ingrédient {
+                                      ingredient_name} : {err}")
+
+                        # Vérifiez si resources-prices est vide et ajoutez les prix si nécessaire
+                        if check_resources_prices_empty():
+                            print(
+                                f"Resources-prices est vide. Initialisation des prix pour l'ingrédient ID {ingredient_id}...")
+
+                            price_data = {
+                                "id": ingredient_id,
+                                "price_1": "",
+                                "price_10": "",
+                                "price_100": ""
+                            }
+                            try:
+                                response = requests.post(
+                                    "https://dfs-bot-4338ac8851d5.herokuapp.com/resources-prices", json=price_data)
+                                response.raise_for_status()
+                                print(f"Prix initialisé pour l'ingrédient {
+                                      ingredient_name} dans resources-prices")
+                            except requests.exceptions.HTTPError as http_err:
+                                print(f"Erreur HTTP lors de l'initialisation des prix de l'ingrédient {
+                                      ingredient_name} : {http_err}")
+                            except Exception as err:
+                                print(f"Erreur lors de l'initialisation des prix de l'ingrédient {
+                                      ingredient_name} : {err}")
 
             break
         except Exception as e:

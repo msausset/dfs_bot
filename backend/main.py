@@ -3,7 +3,10 @@ import keyboard
 import requests
 import time
 import queue
-from api_utils import fetch_items_from_api, clear_prices_from_api
+from api_utils import (fetch_items_from_api, clear_prices_from_api,
+                       check_list_items_empty, check_items_prices_empty,
+                       add_items_to_list, send_price_to_api, clean_price,
+                       check_list_resources_empty, check_resources_prices_empty)
 from item_processing import process_item, choose_hdv
 from image_utils import move_and_click
 from constants import API_QUEUE, STOP_FLAG, STOP_EVENT
@@ -34,28 +37,6 @@ def api_worker():
                 f"Une erreur s'est produite lors de l'envoi vers l'API : {e}")
 
 
-def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
-    url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
-    data = {
-        "id": item_id,
-        "item_name": item_name,
-        "price": clean_price(price_text.strip())
-    }
-    try:
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        print(f"Item {item_number}: {item_name.upper(
-        )} - {clean_price(price_text.strip())} - Enregistré avec succès")
-    except requests.exceptions.HTTPError as http_err:
-        print(f"Item {item_number}: Erreur HTTP : {http_err}")
-    except Exception as err:
-        print(f"Item {item_number}: Erreur : {err}")
-
-
-def clean_price(price_text):
-    return price_text.replace(" ", "")
-
-
 def main():
     global STOP_FLAG
 
@@ -67,10 +48,21 @@ def main():
     stop_thread = threading.Thread(target=monitor_stop_key)
     stop_thread.start()
 
-    print(hdv_choice)
-
     if hdv_choice == '3':
-        clear_prices_from_api(api_route)
+        # Vérifiez si la liste d'items est vide
+        if check_list_items_empty():
+            print("La liste d'items est vide. Récupération des items depuis l'API...")
+            items = fetch_items_from_api(hdv_option)
+            add_items_to_list(items)
+        else:
+            print("La liste d'items n'est pas vide. Aucun ajout nécessaire.")
+
+        # Vérifiez si les prices items sont vides
+        if not check_items_prices_empty():
+            print("La liste des prix des items n'est pas vide. Vidage de l'API ...")
+            clear_prices_from_api(api_route)
+        else:
+            print("La liste des prix des items est vide. Aucun vidage nécessaire.")
 
     if hdv_choice == '1':
         move_and_click(1380, 231)

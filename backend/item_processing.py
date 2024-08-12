@@ -72,7 +72,7 @@ def process_item(item, item_number, api_route):
                         ingredient_slug = ingredient['slug']['fr']
 
                         # Vérifiez si la ressource existe déjà dans list-resources
-                        if not resource_exists(ingredient_id, "list-resources"):
+                        if not resource_exists(ingredient_id):
                             # Ajoutez les ingrédients à list-resources
                             resource_data = {
                                 "id": ingredient_id,

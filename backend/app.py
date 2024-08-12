@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+import requests
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
@@ -33,9 +34,42 @@ def get_list_items():
 
 @app.route('/list-items/clear', methods=['POST'])
 def clear_list_items():
-    global list_items
-    list_items = []
-    return jsonify({"message": "All list items cleared"}), 200
+    url = "https://dfs-bot-4338ac8851d5.herokuapp.com/items-prices"
+
+    try:
+        # Récupérer les données actuelles des prix des ressources
+        response = requests.get(url)
+        response.raise_for_status()
+        items_prices = response.json()
+
+        # Réinitialiser les prix
+        updated_prices = []
+        for item in items_prices:
+            updated_prices.append({
+                "id": item["id"],
+                "price": "",
+            })
+
+        # Mettre à jour les prix des ressources
+        for price in updated_prices:
+            try:
+                response = requests.post(url, json=price)
+                response.raise_for_status()
+                print(f"Prix réinitialisé pour l'ID {price['id']}")
+            except requests.exceptions.HTTPError as http_err:
+                print(f"Erreur HTTP lors de la réinitialisation des prix pour l'ID {
+                      price['id']} : {http_err}")
+            except Exception as err:
+                print(f"Erreur lors de la réinitialisation des prix pour l'ID {
+                      price['id']} : {err}")
+
+        return jsonify({"message": "Prices for resources have been cleared"}), 200
+
+    except requests.exceptions.HTTPError as http_err:
+        return jsonify({"error": f"Erreur HTTP lors de la récupération des prix des ressources : {http_err}"}), 500
+    except Exception as err:
+        return jsonify({"error": f"Erreur lors de la récupération des prix des ressources : {err}"}), 500
+
 
 # Routes pour items-prices
 
@@ -95,9 +129,43 @@ def get_resources_prices():
 
 @app.route('/resources-prices/clear', methods=['POST'])
 def clear_resources_prices():
-    global resources_prices
-    resources_prices = []
-    return jsonify({"message": "All resources prices cleared"}), 200
+    url = "https://dfs-bot-4338ac8851d5.herokuapp.com/resources-prices"
+
+    try:
+        # Récupérer les données actuelles des prix des ressources
+        response = requests.get(url)
+        response.raise_for_status()
+        resources_prices = response.json()
+
+        # Réinitialiser les prix
+        updated_prices = []
+        for resource in resources_prices:
+            updated_prices.append({
+                "id": resource["id"],
+                "price_1": "",
+                "price_10": "",
+                "price_100": ""
+            })
+
+        # Mettre à jour les prix des ressources
+        for price in updated_prices:
+            try:
+                response = requests.post(url, json=price)
+                response.raise_for_status()
+                print(f"Prix réinitialisé pour l'ID {price['id']}")
+            except requests.exceptions.HTTPError as http_err:
+                print(f"Erreur HTTP lors de la réinitialisation des prix pour l'ID {
+                      price['id']} : {http_err}")
+            except Exception as err:
+                print(f"Erreur lors de la réinitialisation des prix pour l'ID {
+                      price['id']} : {err}")
+
+        return jsonify({"message": "Prices for resources have been cleared"}), 200
+
+    except requests.exceptions.HTTPError as http_err:
+        return jsonify({"error": f"Erreur HTTP lors de la récupération des prix des ressources : {http_err}"}), 500
+    except Exception as err:
+        return jsonify({"error": f"Erreur lors de la récupération des prix des ressources : {err}"}), 500
 
 
 if __name__ == '__main__':

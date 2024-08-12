@@ -140,6 +140,20 @@ def check_resources_prices_empty():
         return False
 
 
+def check_and_clear_prices():
+    # Vérifiez si les prix des items ne sont pas vides
+    if not check_items_prices_empty():
+        print("La liste des prix des items n'est pas vide. Vidage de l'API ...")
+        # Appel de la fonction pour vider l'API
+        clear_prices_from_api("items-prices")
+    elif not check_resources_prices_empty():
+        print("La liste des prix des ressources n'est pas vide. Vidage de l'API ...")
+        # Appel de la fonction pour vider l'API
+        clear_prices_from_api("resources-prices")
+    else:
+        print("La liste des prix des items et des ressources sont vides. Aucun vidage nécessaire.")
+
+
 def add_items_to_list(items):
     # URL pour ajouter les items à la liste
     list_items_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items"

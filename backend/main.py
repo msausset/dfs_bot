@@ -6,7 +6,7 @@ import queue
 from api_utils import (fetch_items_from_api, clear_prices_from_api,
                        check_list_items_empty, check_items_prices_empty,
                        add_items_to_list, send_price_to_api, clean_price,
-                       check_list_resources_empty, check_resources_prices_empty)
+                       check_list_resources_empty, check_resources_prices_empty, check_and_clear_prices)
 from item_processing import process_item, choose_hdv
 from image_utils import move_and_click
 from constants import API_QUEUE, STOP_FLAG, STOP_EVENT
@@ -57,12 +57,7 @@ def main():
         else:
             print("La liste d'items n'est pas vide. Aucun ajout nécessaire.")
 
-        # Vérifiez si les prices items sont vides
-        if not check_items_prices_empty():
-            print("La liste des prix des items n'est pas vide. Vidage de l'API ...")
-            clear_prices_from_api(api_route)
-        else:
-            print("La liste des prix des items est vide. Aucun vidage nécessaire.")
+        check_and_clear_prices()
 
     if hdv_choice == '1':
         move_and_click(1380, 231)

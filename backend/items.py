@@ -8,6 +8,8 @@ import threading
 import queue
 import json
 import os
+import aiohttp
+import asyncio
 
 # Configurez le chemin vers le binaire Tesseract-OCR si nécessaire
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -298,30 +300,35 @@ def clear_prices_from_api(api_route):
         print(f"Erreur : {err}")
 
 
-def send_items_to_list(items):
-    # URL pour ajouter les items à la liste
-    list_items_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items"
-
-    for item in items:
-        # Préparer les données pour la route list-items
-        list_item_data = {
-            "id": item['id'],
-            "item_name": item['name']['fr'],
-            "item_slug": item['slug']['fr']
-        }
-
-        try:
-            # Ajouter l'item à la liste d'items
-            response = requests.post(list_items_url, json=list_item_data)
+async def send_item_to_list(session, url, item):
+    # Préparer les données pour la route list-items
+    list_item_data = {
+        "id": item['id'],
+        "item_name": item['name']['fr'],
+        "item_slug": item['slug']['fr']
+    }
+    try:
+        async with session.post(url, json=list_item_data) as response:
             response.raise_for_status()
             print(f"Item ajouté à list-items: {item['name']['fr']}")
+    except aiohttp.ClientResponseError as http_err:
+        print(f"Erreur HTTP lors de l'ajout de l'item {
+              item['name']['fr']} : {http_err}")
+    except Exception as err:
+        print(f"Erreur lors de l'ajout de l'item {item['name']['fr']} : {err}")
 
-        except requests.exceptions.HTTPError as http_err:
-            print(f"Erreur HTTP lors de l'ajout de l'item {
-                  item['name']['fr']} : {http_err}")
-        except Exception as err:
-            print(f"Erreur lors de l'ajout de l'item {
-                  item['name']['fr']} : {err}")
+
+async def send_items_to_list_async(items):
+    list_items_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items"
+    async with aiohttp.ClientSession() as session:
+        tasks = [send_item_to_list(session, list_items_url, item)
+                 for item in items]
+        await asyncio.gather(*tasks)
+
+
+def send_items_to_list(items):
+    # Exécuter la fonction asynchrone
+    asyncio.run(send_items_to_list_async(items))
 
 
 def is_list_items_empty():

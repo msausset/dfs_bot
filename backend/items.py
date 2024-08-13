@@ -202,31 +202,21 @@ def clean_price(price_text):
     return price_text.replace(" ", "")
 
 
-async def send_price_to_api_async(session, item_id, item_name, price_text, item_number, api_route):
+def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
     url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
     data = {
         "id": item_id,
         "price": clean_price(price_text.strip())
     }
     try:
-        async with session.post(url, json=data) as response:
-            response.raise_for_status()
-            print(f"Item {item_number}: {item_name.upper(
-            )} - {clean_price(price_text.strip())} - Enregistré avec succès")
-    except aiohttp.ClientResponseError as http_err:
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+        print(f"Item {item_number}: {item_name.upper(
+        )} - {clean_price(price_text.strip())} - Enregistré avec succès")
+    except requests.exceptions.HTTPError as http_err:
         print(f"Item {item_number}: Erreur HTTP : {http_err}")
     except Exception as err:
         print(f"Item {item_number}: Erreur : {err}")
-
-
-def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
-    asyncio.run(_send_price_to_api(item_id, item_name,
-                price_text, item_number, api_route))
-
-
-async def _send_price_to_api(item_id, item_name, price_text, item_number, api_route):
-    async with aiohttp.ClientSession() as session:
-        await send_price_to_api_async(session, item_id, item_name, price_text, item_number, api_route)
 
 
 def process_item(item, item_number, api_route):
@@ -354,22 +344,19 @@ def is_list_items_empty():
 
 
 def api_worker():
-    async def process_queue():
-        async with aiohttp.ClientSession() as session:
-            while True:
-                try:
-                    item = api_queue.get(timeout=1)
-                    if item[0] is None:  # Vérifiez que le signal de fin est bien reçu
-                        break
-                    item_id, item_name, price_text, item_number, api_route = item
-                    await send_price_to_api_async(session, item_id, item_name, price_text, item_number, api_route)
-                except queue.Empty:
-                    continue
-                except Exception as e:
-                    print(
-                        f"Une erreur s'est produite lors de l'envoi vers l'API : {e}")
-
-    asyncio.run(process_queue())
+    while True:
+        try:
+            item = api_queue.get(timeout=1)
+            if item[0] is None:  # Vérifiez que le signal de fin est bien reçu
+                break
+            item_id, item_name, price_text, item_number, api_route = item
+            send_price_to_api(item_id, item_name, price_text,
+                              item_number, api_route)
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(
+                f"Une erreur s'est produite lors de l'envoi vers l'API : {e}")
 
 
 def monitor_stop_key():

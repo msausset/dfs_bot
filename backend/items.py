@@ -80,30 +80,31 @@ def fetch_items_from_api(hdv_option):
     return items
 
 
-def fetch_recipes_from_api(item_id):
+async def fetch_recipes_from_api_async(session, item_id):
     url = f"https://api.dofusdb.fr/recipes?resultId={item_id}"
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        recipe_data = response.json().get('data', [])
+        async with session.get(url) as response:
+            response.raise_for_status()
+            recipe_data = (await response.json()).get('data', [])
 
-        if not recipe_data:
-            print(f"Aucune recette trouvée pour l'item ID: {item_id}")
-            return []
+            if not recipe_data:
+                print(f"Aucune recette trouvée pour l'item ID: {item_id}")
+                return []
 
-        # On suppose que la première recette est la bonne
-        first_recipe = recipe_data[0]
-        ingredient_ids = first_recipe.get('ingredientIds', [])
+            # On suppose que la première recette est la bonne
+            first_recipe = recipe_data[0]
+            ingredient_ids = first_recipe.get('ingredientIds', [])
 
-        ingredients = []
-        for ingredient_id in ingredient_ids:
-            ingredient_response = requests.get(
-                f"https://api.dofusdb.fr/items/{ingredient_id}")
-            ingredient_response.raise_for_status()
-            ingredients.append(ingredient_response.json())
+            ingredients = []
+            tasks = []
+            for ingredient_id in ingredient_ids:
+                tasks.append(fetch_ingredient(session, ingredient_id))
 
-        return ingredients
-    except requests.exceptions.HTTPError as http_err:
+            # Attendre la fin de toutes les tâches de récupération des ingrédients
+            ingredients = await asyncio.gather(*tasks)
+            return [ingredient for sublist in ingredients for ingredient in sublist]
+
+    except aiohttp.ClientResponseError as http_err:
         print(f"Erreur HTTP lors de la récupération des recettes : {http_err}")
         return []
     except Exception as err:
@@ -111,17 +112,61 @@ def fetch_recipes_from_api(item_id):
         return []
 
 
-def resource_exists(resource_id):
+async def fetch_ingredient(session, ingredient_id):
+    url = f"https://api.dofusdb.fr/items/{ingredient_id}"
     try:
-        response = requests.get(
-            f"https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources")
-        response.raise_for_status()
-        resources = response.json()
-        return any(resource['id'] == resource_id for resource in resources)
-    except requests.exceptions.RequestException as e:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            return [await response.json()]
+    except aiohttp.ClientResponseError as http_err:
+        print(f"Erreur HTTP lors de la récupération de l'ingrédient {
+              ingredient_id} : {http_err}")
+        return []
+    except Exception as err:
+        print(f"Erreur lors de la récupération de l'ingrédient {
+              ingredient_id} : {err}")
+        return []
+
+
+async def handle_resource_retrieval(item_id):
+    async with aiohttp.ClientSession() as session:
+        ingredients = await fetch_recipes_from_api_async(session, item_id)
+        for ingredient in ingredients:
+            ingredient_id = ingredient['id']
+            if not await resource_exists_async(session, ingredient_id):
+                resource_data = {
+                    "id": ingredient_id,
+                    "item_name": ingredient['name']['fr'],
+                    "item_slug": ingredient['slug']['fr'],
+                }
+                await send_resource_to_api_async(session, resource_data)
+
+
+async def resource_exists_async(session, resource_id):
+    url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources"
+    try:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            resources = await response.json()
+            return any(resource['id'] == resource_id for resource in resources)
+    except aiohttp.ClientResponseError as e:
         print(
             f"Erreur lors de la vérification de l'existence de la ressource : {e}")
         return False
+
+
+async def send_resource_to_api_async(session, resource_data):
+    url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources"
+    try:
+        async with session.post(url, json=resource_data) as response:
+            response.raise_for_status()
+            print(f"Ressource {resource_data['item_name']} ajoutée.")
+    except aiohttp.ClientResponseError as e:
+        print(f"Erreur HTTP lors de l'ajout de la ressource {
+              resource_data['item_name']} : {e}")
+    except Exception as e:
+        print(f"Erreur lors de l'ajout de la ressource {
+              resource_data['item_name']} : {e}")
 
 
 def is_resources_empty():
@@ -237,55 +282,42 @@ def process_item(item, item_number, api_route):
 
         try:
             move_and_click(third_x, third_y)
-            time.sleep(0.1)  # Augmenter légèrement le temps de pause
+            time.sleep(0.1)
 
             move_and_click(first_x, first_y)
-            time.sleep(0.1)  # Augmenter légèrement le temps de pause
+            time.sleep(0.1)
 
             pyautogui.typewrite(item_slug, interval=0.01)
-            time.sleep(0.5)  # Augmenter légèrement le temps de pause
+            time.sleep(0.5)
 
             move_and_click(second_x, second_y)
-            time.sleep(0.5)  # Augmenter légèrement le temps de pause
+            time.sleep(0.5)
 
             price_image = capture_price_area(
                 price_x, price_y, price_width, price_height)
-            time.sleep(0.5)  # Augmenter légèrement le temps de pause
+            time.sleep(0.5)
 
             price_text = extract_text_from_image(price_image)
 
             if not price_text.strip():
                 raise ValueError("Le texte du prix est vide ou invalide")
 
-            # Ajoutez les données à la queue avec le numéro d'item et la route API
             api_queue.put(
                 (item_id, item_name, price_text, item_number, api_route))
-            time.sleep(0.2)  # Augmenter légèrement le temps de pause
+            time.sleep(0.2)
 
             move_and_click(third_x, third_y)
-            time.sleep(0.1)  # Augmenter légèrement le temps de pause
+            time.sleep(0.1)
 
-            # Comparer les valeurs et récupérer les ingrédients si nécessaire
             if api_route == 'items-prices':
-                ingredients = fetch_recipes_from_api(item_id)
-                for ingredient in ingredients:
-                    ingredient_id = ingredient['id']
-                    # Vérifiez si la ressource existe déjà
-                    if not resource_exists(ingredient_id):
-                        resource_data = {
-                            "id": ingredient_id,
-                            "item_name": ingredient['name']['fr'],
-                            "item_slug": ingredient['slug']['fr'],
-                        }
-                        requests.post(
-                            "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources", json=resource_data)
+                asyncio.run(handle_resource_retrieval(item_id))
 
-            break  # Sortir de la boucle en cas de succès
+            break
         except Exception as e:
             print(f"Une erreur s'est produite sur la fonction 'processing item' {
                   item_number} : {e}")
             attempt += 1
-            time.sleep(1)  # Attendre avant de réessayer
+            time.sleep(1)
 
 
 def clear_prices_from_api(api_route):
@@ -368,6 +400,9 @@ def monitor_stop_key():
 def main():
     global stop_flag
 
+    # Enregistrer le temps de début
+    start_time = time.time()
+
     hdv_choice, hdv_option, api_route = choose_hdv()
 
     stop_thread = threading.Thread(target=monitor_stop_key)
@@ -412,6 +447,15 @@ def main():
     print("Stop thread terminé.")
 
     print("Programme terminé !")
+
+    # Enregistrer le temps de fin
+    end_time = time.time()
+
+    # Calculer le temps total
+    elapsed_time = end_time - start_time
+
+    # Afficher le temps total
+    print(f"Temps d'exécution total : {elapsed_time:.2f} secondes")
 
 
 if __name__ == "__main__":

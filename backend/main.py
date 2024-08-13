@@ -14,11 +14,8 @@ from constants import API_QUEUE, STOP_FLAG, STOP_EVENT
 
 def monitor_stop_key():
     global STOP_FLAG
-    while not STOP_EVENT.is_set():
-        if keyboard.is_pressed('num 0'):
-            STOP_FLAG = True
-            STOP_EVENT.set()
-            break
+    keyboard.wait('num 0')
+    STOP_FLAG = True
 
 
 def api_worker():
@@ -78,9 +75,6 @@ def main():
 
     api_thread.join()
     print("API thread terminé.")
-
-    # Signaler l'arrêt au thread de surveillance
-    STOP_EVENT.set()
 
     stop_thread.join()
     print("Stop thread terminé.")

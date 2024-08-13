@@ -39,9 +39,9 @@ HDV_OPTIONS = {
 
 # Définir les routes API en fonction de l'HDV choisi
 API_ROUTES = {
-    '1': 'resources',
-    '2': 'consumables',
-    '3': 'items',
+    '1': 'list-resources',
+    '2': 'list-resources',
+    '3': 'items-prices',
 }
 
 
@@ -63,15 +63,6 @@ def fetch_items_from_api(hdv_option):
     items = []
     skip = 0
     limit = 50
-
-    # Ajouter les requêtes supplémentaires si HDV Ressources est choisi
-    if hdv_option == HDV_OPTIONS['1']:
-        extra_ids = [14635, 15219, 15271]
-        for item_id in extra_ids:
-            response = requests.get(
-                f"{url}?$limit={limit}&$skip={skip}&id={item_id}")
-            data = response.json()
-            items.extend(data['data'])
 
     while True:
         response = requests.get(
@@ -121,7 +112,7 @@ def fetch_recipes_from_api(item_id):
 def resource_exists(resource_id):
     try:
         response = requests.get(
-            f"https://dfs-bot-4338ac8851d5.herokuapp.com/resources")
+            f"https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources")
         response.raise_for_status()
         resources = response.json()
         return any(resource['id'] == resource_id for resource in resources)
@@ -134,7 +125,7 @@ def resource_exists(resource_id):
 def is_resources_empty():
     try:
         response = requests.get(
-            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources")
+            "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources")
         response.raise_for_status()
         resources = response.json()
         return len(resources) == 0
@@ -213,7 +204,6 @@ def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
     url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
     data = {
         "id": item_id,
-        "item_name": item_name,
         "price": clean_price(price_text.strip())
     }
     try:
@@ -227,7 +217,7 @@ def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
         print(f"Item {item_number}: Erreur : {err}")
 
 
-def process_item(item, item_number, api_route, resources_empty):
+def process_item(item, item_number, api_route):
     if stop_flag:
         return
 
@@ -237,11 +227,6 @@ def process_item(item, item_number, api_route, resources_empty):
 
     attempt = 0
     max_attempts = 3
-
-    # Lire le nombre total d'items stocké dans le fichier de configuration
-    stored_total_items = read_total_items_from_config()
-    # Récupérer le nombre total d'items depuis l'API
-    total_items = get_total_items()
 
     while attempt < max_attempts:
         if stop_flag:
@@ -279,7 +264,7 @@ def process_item(item, item_number, api_route, resources_empty):
             time.sleep(0.1)  # Augmenter légèrement le temps de pause
 
             # Comparer les valeurs et récupérer les ingrédients si nécessaire
-            if api_route == 'items' and (resources_empty or total_items != stored_total_items):
+            if api_route == 'items-prices':
                 ingredients = fetch_recipes_from_api(item_id)
                 for ingredient in ingredients:
                     ingredient_id = ingredient['id']
@@ -289,15 +274,9 @@ def process_item(item, item_number, api_route, resources_empty):
                             "id": ingredient_id,
                             "item_name": ingredient['name']['fr'],
                             "item_slug": ingredient['slug']['fr'],
-                            "price_1": "",  # Champs "1", "10" et "100" vides pour l'instant
-                            "price_10": "",
-                            "price_100": ""
                         }
                         requests.post(
-                            "https://dfs-bot-4338ac8851d5.herokuapp.com/resources", json=resource_data)
-
-                # Mettre à jour le fichier de configuration après avoir récupéré les ingrédients
-                write_total_items_to_config(total_items)
+                            "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources", json=resource_data)
 
             break  # Sortir de la boucle en cas de succès
         except Exception as e:
@@ -317,6 +296,44 @@ def clear_prices_from_api(api_route):
         print(f"Erreur HTTP : {http_err}")
     except Exception as err:
         print(f"Erreur : {err}")
+
+
+def send_items_to_list(items):
+    # URL pour ajouter les items à la liste
+    list_items_url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items"
+
+    for item in items:
+        # Préparer les données pour la route list-items
+        list_item_data = {
+            "id": item['id'],
+            "item_name": item['name']['fr'],
+            "item_slug": item['slug']['fr']
+        }
+
+        try:
+            # Ajouter l'item à la liste d'items
+            response = requests.post(list_items_url, json=list_item_data)
+            response.raise_for_status()
+            print(f"Item ajouté à list-items: {item['name']['fr']}")
+
+        except requests.exceptions.HTTPError as http_err:
+            print(f"Erreur HTTP lors de l'ajout de l'item {
+                  item['name']['fr']} : {http_err}")
+        except Exception as err:
+            print(f"Erreur lors de l'ajout de l'item {
+                  item['name']['fr']} : {err}")
+
+
+def is_list_items_empty():
+    try:
+        response = requests.get(
+            "https://dfs-bot-4338ac8851d5.herokuapp.com/list-items")
+        response.raise_for_status()
+        items = response.json()
+        return len(items) == 0
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la vérification des items : {e}")
+        return False
 
 
 def api_worker():
@@ -355,10 +372,14 @@ def main():
         move_and_click(1380, 231)
         time.sleep(0.2)
 
-    items = fetch_items_from_api(hdv_option)
+    if is_list_items_empty():
+        print("La liste d'items est vide. Récupération des items depuis l'API...")
+        items = fetch_items_from_api(hdv_option)
+        send_items_to_list(items)
+    else:
+        print("La liste d'items n'est pas vide. Aucun ajout nécessaire.")
 
-    # Vérifiez si la route /resources est vide une fois au début du script
-    resources_empty = is_resources_empty()
+    items = fetch_items_from_api(hdv_option)
 
     # Thread pour envoyer les données à l'API
     api_thread = threading.Thread(target=api_worker)
@@ -369,7 +390,7 @@ def main():
         if stop_flag:
             print("Arrêt du script demandé ...")
             break
-        process_item(item, index, api_route, resources_empty)
+        process_item(item, index, api_route)
 
     # Envoyer le signal de fin au worker API
     # Assurez-vous de correspondre au format attendu

@@ -75,6 +75,13 @@ def add_list_resource():
 def get_list_resources():
     return jsonify(list_resources)
 
+
+@app.route('/list-resources/clear', methods=['POST'])
+def clear_list_resources():
+    global list_resources
+    list_resources = []
+    return jsonify({"message": "All list resources cleared"}), 200
+
 # Routes pour resources-prices
 
 

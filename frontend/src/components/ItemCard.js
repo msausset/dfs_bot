@@ -7,12 +7,29 @@ const ItemCard = ({ item, prices }) => {
   const [ingredients, setIngredients] = useState([]); // État pour stocker les détails des ingrédients
   const [loading, setLoading] = useState(true); // État pour gérer le chargement
   const [error, setError] = useState(null); // État pour gérer les erreurs
+  const [resourcePrices, setResourcePrices] = useState([]); // Nouvel état pour les prix des ressources
 
   const itemPrice = prices.find((price) => price.id === item.id);
 
   const formatPrice = (price) => {
     if (!price) return "";
     return parseInt(price, 10).toLocaleString("fr-FR"); // Formatage des nombres pour la France
+  };
+
+  const calculateTotalPrice = (quantity, price, price10, price100) => {
+    let totalPrice = 0;
+    if (quantity >= 100) {
+      const hundreds = Math.floor(quantity / 100);
+      quantity %= 100;
+      totalPrice += hundreds * price100;
+    }
+    if (quantity >= 10) {
+      const tens = Math.floor(quantity / 10);
+      quantity %= 10;
+      totalPrice += tens * price10;
+    }
+    totalPrice += quantity * price;
+    return totalPrice;
   };
 
   useEffect(() => {
@@ -36,6 +53,12 @@ const ItemCard = ({ item, prices }) => {
         );
 
         setIngredients(ingredientDetails); // Stocker les détails des ingrédients
+
+        // Récupérer les prix des ressources
+        const pricesResponse = await axios.get(
+          "https://dfs-bot-4338ac8851d5.herokuapp.com/resources-prices"
+        );
+        setResourcePrices(pricesResponse.data);
       } catch (error) {
         setError("Erreur lors de la récupération des données de la recette.");
       } finally {
@@ -63,9 +86,26 @@ const ItemCard = ({ item, prices }) => {
               const ingredient = ingredients.find(
                 (item) => item.id === ingredientId
               );
+              const resourcePrice = resourcePrices.find(
+                (price) => price.id === ingredientId
+              );
+              const quantity = recipe.quantities[index];
+              const totalPrice = resourcePrice
+                ? calculateTotalPrice(
+                    quantity,
+                    parseInt(resourcePrice.price, 10),
+                    parseInt(resourcePrice.price_10, 10),
+                    parseInt(resourcePrice.price_100, 10)
+                  )
+                : 0;
+
               return (
                 <li key={ingredientId}>
-                  {ingredient.name.fr} : {recipe.quantities[index]}
+                  {ingredient.name.fr} : {quantity} (
+                  {resourcePrice
+                    ? formatPrice(totalPrice) + " Kamas"
+                    : "Prix non disponible"}
+                  )
                 </li>
               );
             })}

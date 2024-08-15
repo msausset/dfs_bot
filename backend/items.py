@@ -10,6 +10,7 @@ import json
 import os
 import aiohttp
 import asyncio
+import re
 
 # Configurez le chemin vers le binaire Tesseract-OCR si nécessaire
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -21,6 +22,7 @@ stop_flag = False
 
 # Définir les coordonnées globales
 price_x, price_y = 1208, 328
+price_y_10, price_y_100 = 398, 468
 price_width, price_height = 160, 38
 
 first_x, first_y = 555, 256
@@ -41,8 +43,8 @@ HDV_OPTIONS = {
 
 # Définir les routes API en fonction de l'HDV choisi
 API_ROUTES = {
-    '1': 'list-resources',
-    '2': 'list-resources',
+    '1': 'resources-prices',
+    '2': 'resources-prices',
     '3': 'items-prices',
 }
 
@@ -78,6 +80,18 @@ def fetch_items_from_api(hdv_option):
         skip += limit
 
     return items
+
+
+def fetch_resources_from_custom_api():
+    url = "https://dfs-bot-4338ac8851d5.herokuapp.com/list-resources"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        resources = response.json()
+        return resources
+    except requests.exceptions.RequestException as e:
+        print(f"Erreur lors de la récupération des ressources : {e}")
+        return []
 
 
 async def fetch_recipes_from_api_async(session, item_id):
@@ -244,33 +258,61 @@ def extract_text_from_image(image):
 
 
 def clean_price(price_text):
-    return price_text.replace(" ", "")
+    return re.sub(r'\D', '', price_text)
 
 
-def send_price_to_api(item_id, item_name, price_text, item_number, api_route):
+def send_price_to_api(item_id, item_name, price_text, item_number, api_route, additional_prices=None):
     url = f"https://dfs-bot-4338ac8851d5.herokuapp.com/{api_route}"
     data = {
         "id": item_id,
         "price": clean_price(price_text.strip())
     }
+
+    if additional_prices:
+        # Nettoyer chaque valeur dans le dictionnaire additional_prices
+        cleaned_additional_prices = {
+            key: clean_price(value.strip()) for key, value in additional_prices.items()
+        }
+        data.update(cleaned_additional_prices)
+
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
+
+        # Préparer le message de succès
+        additional_info = ""
+        if additional_prices:
+            additional_info = " | " + \
+                " | ".join(f"{key}: {clean_price(value.strip())
+                                     }" for key, value in additional_prices.items())
+
         print(f"Item {item_number}: {item_name.upper(
-        )} - {clean_price(price_text.strip())} - Enregistré avec succès")
+        )} - {clean_price(price_text.strip())}{additional_info} - Enregistré avec succès")
     except requests.exceptions.HTTPError as http_err:
         print(f"Item {item_number}: Erreur HTTP : {http_err}")
     except Exception as err:
         print(f"Item {item_number}: Erreur : {err}")
 
 
-def process_item(item, item_number, api_route):
+def process_item(item, item_number, api_route, hdv_choice):
     if stop_flag:
         return
 
-    item_name = item['name']['fr']
-    item_slug = item['slug']['fr']
-    item_id = item['id']
+    if hdv_choice == '1':
+        # Traitement pour les ressources
+        item_name = item['item_name']
+        item_slug = item['item_slug']
+        item_id = item['id']
+    elif hdv_choice == '3':
+        # Traitement pour les équipements
+        item_name = item['name']['fr']
+        item_slug = item['slug']['fr']
+        item_id = item['id']
+    else:
+        # Autres cas (option 2 ou autre)
+        item_name = item['name']['fr']
+        item_slug = item['slug']['fr']
+        item_id = item['id']
 
     attempt = 0
     max_attempts = 3
@@ -293,17 +335,50 @@ def process_item(item, item_number, api_route):
             move_and_click(second_x, second_y)
             time.sleep(0.5)
 
+            # Première capture de prix
             price_image = capture_price_area(
                 price_x, price_y, price_width, price_height)
             time.sleep(0.5)
 
             price_text = extract_text_from_image(price_image)
+            time.sleep(0.5)
 
             if not price_text.strip():
                 raise ValueError("Le texte du prix est vide ou invalide")
 
+            # Préparer les données à envoyer
+            additional_prices = {}
+            additional_prices_available = False
+
+            if hdv_choice == '1':
+                # Capture supplémentaire pour les ressources
+                price_image_10 = capture_price_area(
+                    price_x, price_y_10, price_width, price_height)
+                time.sleep(0.5)
+                price_text_10 = extract_text_from_image(price_image_10)
+                time.sleep(0.5)
+
+                if price_text_10.strip():
+                    additional_prices["price_10"] = price_text_10
+                    additional_prices_available = True
+                else:
+                    print(f"Lot 10 non disponible pour l'item {item_number}.")
+
+                price_image_100 = capture_price_area(
+                    price_x, price_y_100, price_width, price_height)
+                time.sleep(0.5)
+                price_text_100 = extract_text_from_image(price_image_100)
+                time.sleep(0.5)
+
+                if price_text_100.strip():
+                    additional_prices["price_100"] = price_text_100
+                    additional_prices_available = True
+                else:
+                    print(f"Lot 100 non disponible pour l'item {item_number}.")
+
+            # Envoyer les données à la queue
             api_queue.put(
-                (item_id, item_name, price_text, item_number, api_route))
+                (item_id, item_name, price_text, item_number, api_route, additional_prices if additional_prices_available else None))
             time.sleep(0.2)
 
             move_and_click(third_x, third_y)
@@ -314,7 +389,7 @@ def process_item(item, item_number, api_route):
 
             break
         except Exception as e:
-            print(f"Une erreur s'est produite sur la fonction 'processing item' {
+            print(f"Une erreur s'est produite sur la fonction 'process_item' {
                   item_number} : {e}")
             attempt += 1
             time.sleep(1)
@@ -381,9 +456,9 @@ def api_worker():
             item = api_queue.get(timeout=1)
             if item[0] is None:  # Vérifiez que le signal de fin est bien reçu
                 break
-            item_id, item_name, price_text, item_number, api_route = item
+            item_id, item_name, price_text, item_number, api_route, additional_prices = item
             send_price_to_api(item_id, item_name, price_text,
-                              item_number, api_route)
+                              item_number, api_route, additional_prices)
         except queue.Empty:
             continue
         except Exception as e:
@@ -410,18 +485,24 @@ def main():
 
     clear_prices_from_api(api_route)  # Clear the API before adding new prices
 
-    if hdv_choice == '1':  # Ajouter un clic supplémentaire pour l'option Ressources
-        move_and_click(1380, 231)
-        time.sleep(0.2)
+    items = []
 
     if is_list_items_empty():
         print("La liste d'items est vide. Récupération des items depuis l'API...")
-        items = fetch_items_from_api(hdv_option)
+
+        if hdv_choice == '1':  # Récupération des ressources
+            items = fetch_resources_from_custom_api()
+        else:  # Récupération des items par défaut
+            items = fetch_items_from_api(hdv_option)
+
         send_items_to_list(items)
     else:
         print("La liste d'items n'est pas vide. Aucun ajout nécessaire.")
 
-    items = fetch_items_from_api(hdv_option)
+    if hdv_choice == '1':  # Récupération des ressources
+        items = fetch_resources_from_custom_api()
+    else:  # Récupération des items par défaut
+        items = fetch_items_from_api(hdv_option)
 
     # Thread pour envoyer les données à l'API
     api_thread = threading.Thread(target=api_worker)
@@ -432,7 +513,7 @@ def main():
         if stop_flag:
             print("Arrêt du script demandé ...")
             break
-        process_item(item, index, api_route)
+        process_item(item, index, api_route, hdv_choice)
 
     # Envoyer le signal de fin au worker API
     # Assurez-vous de correspondre au format attendu

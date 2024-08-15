@@ -34,7 +34,7 @@ const App = () => {
     const fetchPrices = async () => {
       try {
         const response = await axios.get(
-          "https://dfs-bot-4338ac8851d5.herokuapp.com/items"
+          "https://dfs-bot-4338ac8851d5.herokuapp.com/items-prices"
         );
         setPrices(response.data);
       } catch (error) {

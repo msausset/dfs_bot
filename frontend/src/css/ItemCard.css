@@ -1,15 +1,45 @@
 .item-card {
-  border: 1px solid #ddd;
-  margin: 10px;
+  flex: 1 1 calc(10% - 5px); /* Ajuster la largeur des cartes pour afficher 10 items par ligne */
+  box-sizing: border-box;
+  max-width: calc(
+    10% - 5px
+  ); /* Assurer que les cartes ne dépassent pas la largeur définie */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center; /* Centrer le texte pour éviter les décalages */
   padding: 10px;
-  border-radius: 5px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  transition: background-color 0.3s, border-color 0.3s; /* Pour une transition douce des couleurs */
+}
+
+.item-card.beneficial {
+  background-color: green; /* Vert foncé */
+  border-color: #0b2e13;
+  color: white; /* Texte en blanc pour contraster avec le fond foncé */
+}
+
+.item-card.not-beneficial {
+  background-color: #fe2d01; /* Rouge foncé */
+  border-color: #491217;
+  color: white; /* Texte en blanc pour contraster avec le fond foncé */
+}
+
+.item-card h3 {
+  margin: 10px 0;
+  font-size: 14px;
+  min-height: 40px; /* Assurez-vous que tous les titres aient la même hauteur minimale */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .item-card img {
   max-width: 100px;
 }
 
-.item-card a {
-  text-decoration: none;
-  color: #007bff;
+.item-card p {
+  margin: 5px 0;
 }

@@ -1,15 +1,51 @@
-.pagination {
-  margin: 20px 0;
+.App {
+  padding: 20px;
 }
 
-.pagination button {
-  margin: 0 5px;
-  padding: 5px 10px;
+.items-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px; /* Espacement entre les éléments */
+}
+
+.item-card {
+  flex: 1 1 calc(10% - 5px); /* Ajuster la largeur des cartes pour afficher 10 items par ligne */
+  box-sizing: border-box;
+  max-width: calc(
+    10% - 5px
+  ); /* Assurer que les cartes ne dépassent pas la largeur définie */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Styles pour le bouton "Charger plus" */
+.load-more-button {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
   border: none;
-  background-color: #f0f0f0;
+  background-color: #d3d3d3; /* Gris clair */
+  color: white;
+  font-size: 16px;
   cursor: pointer;
+  border-radius: 20px; /* Arrondi */
+  transition: background-color 0.3s;
 }
 
-.pagination button:hover {
-  background-color: #ddd;
+.load-more-button:hover {
+  background-color: #b0b0b0; /* Gris plus foncé au survol */
+}
+
+.load-more-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.h3class {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }

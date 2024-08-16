@@ -2,16 +2,16 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "../css/ItemCard.css";
 
-const ItemCard = ({ item, prices }) => {
-  const [loading, setLoading] = useState(true); // État pour gérer le chargement
-  const [error, setError] = useState(null); // État pour gérer les erreurs
-  const [totalIngredientsPrice, setTotalIngredientsPrice] = useState(0); // État pour stocker le prix total des ingrédients
+const ItemCard = ({ item, prices, onGainCalculated }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalIngredientsPrice, setTotalIngredientsPrice] = useState(0);
 
   const itemPrice = prices.find((price) => price.id === item.id);
 
   const formatPrice = (price) => {
     if (!price) return "";
-    return parseInt(price, 10).toLocaleString("fr-FR"); // Formatage des nombres pour la France
+    return parseInt(price, 10).toLocaleString("fr-FR");
   };
 
   const calculateTotalPrice = (quantity, price, price10, price100) => {
@@ -38,12 +38,10 @@ const ItemCard = ({ item, prices }) => {
         );
         const recipeData = response.data.data[0];
 
-        // Récupérer les prix des ressources
         const pricesResponse = await axios.get(
           "https://dfs-bot-4338ac8851d5.herokuapp.com/resources-prices"
         );
 
-        // Calculer le prix total des ingrédients
         let totalPrice = 0;
         recipeData.ingredientIds.forEach((ingredientId, index) => {
           const quantity = recipeData.quantities[index];
@@ -64,11 +62,11 @@ const ItemCard = ({ item, prices }) => {
           }
         });
 
-        setTotalIngredientsPrice(totalPrice); // Stocker le prix total des ingrédients
+        setTotalIngredientsPrice(totalPrice);
       } catch (error) {
         setError("Erreur lors de la récupération des données de la recette.");
       } finally {
-        setLoading(false); // Fin du chargement
+        setLoading(false);
       }
     };
 
@@ -81,6 +79,12 @@ const ItemCard = ({ item, prices }) => {
   };
 
   const profit = calculateProfit();
+
+  useEffect(() => {
+    if (profit !== null) {
+      onGainCalculated(item.id, profit);
+    }
+  }, [profit, onGainCalculated, item.id]);
 
   return (
     <div

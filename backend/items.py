@@ -483,7 +483,9 @@ def main():
     stop_thread = threading.Thread(target=monitor_stop_key)
     stop_thread.start()
 
-    clear_prices_from_api(api_route)  # Clear the API before adding new prices
+    if hdv_choice == 1 or hdv_choice == 3:
+        # Clear the API before adding new prices
+        clear_prices_from_api(api_route)
 
     items = []
 

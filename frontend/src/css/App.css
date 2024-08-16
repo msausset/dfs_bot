@@ -49,3 +49,26 @@
   text-overflow: ellipsis;
   width: 100%;
 }
+
+/* App.css */
+.centered-button-container {
+  display: flex;
+  justify-content: center; /* Centre le bouton horizontalement */
+  margin-top: 20px; /* Ajoute un peu d'espace au-dessus du bouton */
+  margin-bottom: 20px;
+}
+
+.sort-button {
+  padding: 10px 20px; /* Ajoute du padding pour augmenter la largeur et la hauteur */
+  font-size: 16px; /* Augmente la taille du texte */
+  border: none; /* Supprime les bordures par défaut */
+  border-radius: 12px; /* Ajoute des coins arrondis */
+  background-color: #d3d3d3; /* Couleur de fond bleue */
+  color: black; /* Couleur du texte */
+  cursor: pointer; /* Change le curseur lorsque vous survolez le bouton */
+  transition: background-color 0.3s ease; /* Ajoute une transition douce pour le changement de couleur */
+}
+
+.sort-button:hover {
+  background-color: #7e7e7e; /* Couleur de fond lorsque le bouton est survolé */
+}

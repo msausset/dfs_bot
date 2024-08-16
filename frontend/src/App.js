@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import ItemCard from "./components/ItemCard";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import "./css/App.css";
 
-const ITEMS_PER_PAGE = 50; // Nombre d'articles à charger par page
+const ITEMS_PER_PAGE = 50;
 const TYPE_IDS = [1, 82, 9, 11, 10, 16, 17];
 
 const App = () => {
@@ -12,6 +12,8 @@ const App = () => {
   const [prices, setPrices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [gains, setGains] = useState({});
+  const [itemCardsLoading, setItemCardsLoading] = useState(true); // Ajouté pour suivre le chargement des ItemCards
 
   useEffect(() => {
     const fetchAllItems = async () => {
@@ -39,7 +41,7 @@ const App = () => {
         } catch (error) {
           setError("Erreur lors de la récupération des articles.");
           console.error("Error fetching items:", error);
-          hasMoreItems = false; // Stop the loop in case of error
+          hasMoreItems = false;
         }
       }
 
@@ -60,8 +62,28 @@ const App = () => {
     };
 
     fetchAllItems();
-    fetchPrices(); // Récupérer les prix une fois au montage du composant
+    fetchPrices();
   }, []);
+
+  const handleGainCalculated = useCallback((itemId, gain) => {
+    setGains((prevGains) => ({
+      ...prevGains,
+      [itemId]: gain,
+    }));
+  }, []);
+
+  const sortItemsByGain = useCallback(() => {
+    const sortedItems = [...items].sort(
+      (a, b) => (gains[b.id] || 0) - (gains[a.id] || 0)
+    );
+    setItems(sortedItems);
+  }, [items, gains]);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      setItemCardsLoading(false); // Tous les ItemCards sont chargés
+    }
+  }, [items]);
 
   return (
     <Router>
@@ -72,19 +94,40 @@ const App = () => {
             element={
               <>
                 {loading ? (
-                  <p>Chargement...</p>
+                  <p>Chargement des articles...</p>
                 ) : error ? (
                   <p>{error}</p>
                 ) : (
-                  <div className="items-container">
-                    {items.length > 0 ? (
-                      items.map((item) => (
-                        <ItemCard key={item.id} item={item} prices={prices} />
-                      ))
+                  <>
+                    {itemCardsLoading ? (
+                      <p>Chargement des cartes d'articles...</p>
                     ) : (
-                      <p>Aucun item correspondant aux critères.</p>
+                      <>
+                        <div className="centered-button-container">
+                          <button
+                            className="sort-button"
+                            onClick={sortItemsByGain}
+                          >
+                            Trier par gain
+                          </button>
+                        </div>
+                        <div className="items-container">
+                          {items.length > 0 ? (
+                            items.map((item) => (
+                              <ItemCard
+                                key={item.id}
+                                item={item}
+                                prices={prices}
+                                onGainCalculated={handleGainCalculated}
+                              />
+                            ))
+                          ) : (
+                            <p>Aucun item correspondant aux critères.</p>
+                          )}
+                        </div>
+                      </>
                     )}
-                  </div>
+                  </>
                 )}
               </>
             }
